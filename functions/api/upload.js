@@ -43,7 +43,7 @@ export async function onRequestPost({ request, env }) {
     }
 
     const form = await request.formData();
-    const file = form.get("file");
+    const file = form.get("image");
 
     if (!file || typeof file.arrayBuffer !== "function") {
       return json({ error: "Image file is required." }, 400);
@@ -57,16 +57,19 @@ export async function onRequestPost({ request, env }) {
     const extension = detectImage(bytes);
 
     if (!extension) {
-      return json({ error: "Only valid JPG, PNG, GIF or WEBP images are allowed." }, 415);
+      return json({
+        error: "Only valid JPG, PNG, GIF or WEBP images are allowed."
+      }, 415);
     }
 
-    const key = `${crypto.randomUUID()}.${extension}`;
     const contentTypes = {
       jpg: "image/jpeg",
       png: "image/png",
       gif: "image/gif",
       webp: "image/webp"
     };
+
+    const key = `${crypto.randomUUID()}.${extension}`;
 
     await env.UPLOADS.put(key, bytes, {
       httpMetadata: {
