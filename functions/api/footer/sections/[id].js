@@ -58,4 +58,4 @@ export async function onRequestDelete({ request, env, params }) {
   } catch {
     return json({ error: "Unable to delete footer section." }, 500);
   }
-    
+      }
