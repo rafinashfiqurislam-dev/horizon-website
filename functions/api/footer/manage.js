@@ -9,12 +9,12 @@ export async function onRequestGet({ request, env }) {
 
     const sections = await dbAll(
       env,
-      "SELECT * FROM footer_sections ORDER BY sort_order ASC, id ASC"
+      "SELECT id, title FROM footer_sections ORDER BY id ASC"
     );
 
     const items = await dbAll(
       env,
-      "SELECT * FROM footer_items ORDER BY sort_order ASC, id ASC"
+      "SELECT id, section_id, name, description FROM footer_items ORDER BY id ASC"
     );
 
     return json({ sections, items });
