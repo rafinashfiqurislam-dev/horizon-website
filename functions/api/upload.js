@@ -1,35 +1,17 @@
+
 import { json } from "../_lib/security.js";
 import { adminRequest } from "../_lib/auth.js";
 
 const MAX_SIZE = 5 * 1024 * 1024;
 
 function detectImage(bytes) {
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "jpg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return "png";
+  if (String.fromCharCode(...bytes.slice(0, 6)).startsWith("GIF8")) return "gif";
   if (
-    bytes.length >= 3 &&
-    bytes[0] === 0xff &&
-    bytes[1] === 0xd8 &&
-    bytes[2] === 0xff
-  ) return "jpg";
-
-  if (
-    bytes.length >= 8 &&
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47
-  ) return "png";
-
-  if (
-    bytes.length >= 6 &&
-    String.fromCharCode(...bytes.slice(0, 6)).startsWith("GIF8")
-  ) return "gif";
-
-  if (
-    bytes.length >= 12 &&
     String.fromCharCode(...bytes.slice(0, 4)) === "RIFF" &&
     String.fromCharCode(...bytes.slice(8, 12)) === "WEBP"
   ) return "webp";
-
   return null;
 }
 
@@ -38,8 +20,8 @@ export async function onRequestPost({ request, env }) {
     const { response } = await adminRequest(request, env);
     if (response) return response;
 
-    if (!env.UPLOADS) {
-      return json({ error: "Image storage is not configured." }, 503);
+    if (!env.IMAGEKIT_PRIVATE_KEY || !env.IMAGEKIT_URL_ENDPOINT) {
+      return json({ error: "ImageKit is not configured." }, 503);
     }
 
     const form = await request.formData();
@@ -57,9 +39,7 @@ export async function onRequestPost({ request, env }) {
     const extension = detectImage(bytes);
 
     if (!extension) {
-      return json({
-        error: "Only valid JPG, PNG, GIF or WEBP images are allowed."
-      }, 415);
+      return json({ error: "Only valid JPG, PNG, GIF or WEBP images are allowed." }, 415);
     }
 
     const contentTypes = {
@@ -69,16 +49,35 @@ export async function onRequestPost({ request, env }) {
       webp: "image/webp"
     };
 
-    const key = `${crypto.randomUUID()}.${extension}`;
+    const uploadForm = new FormData();
+    uploadForm.append(
+      "file",
+      new Blob([bytes], { type: contentTypes[extension] }),
+      `image.${extension}`
+    );
+    uploadForm.append("fileName", `${crypto.randomUUID()}.${extension}`);
+    uploadForm.append("useUniqueFileName", "true");
 
-    await env.UPLOADS.put(key, bytes, {
-      httpMetadata: {
-        contentType: contentTypes[extension],
-        cacheControl: "public, max-age=31536000, immutable"
-      }
+    const auth = btoa(`${env.IMAGEKIT_PRIVATE_KEY}:`);
+
+    const result = await fetch("https://upload.imagekit.io/api/v1/files/upload", {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${auth}`
+      },
+      body: uploadForm
     });
 
-    return json({ ok: true, url: `/uploads/${key}` }, 201);
+    if (!result.ok) {
+      return json({ error: "ImageKit upload failed." }, 502);
+    }
+
+    const uploaded = await result.json();
+
+    return json({
+      ok: true,
+      url: uploaded.url
+    }, 201);
   } catch {
     return json({ error: "Unable to upload image." }, 500);
   }
