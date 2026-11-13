@@ -143,3 +143,4 @@ For larger production deployments, consider migrating SQLite to PostgreSQL and i
 
 Building ideas into meaningful digital experiences and exploring what technology can make possible.
 Cloudflare deployment update.
+Deployment update - November 14, 2026
