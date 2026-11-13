@@ -1,4 +1,3 @@
-
 const SESSION_COOKIE = "horizon.sid";
 const SESSION_SECONDS = 8 * 60 * 60;
 const PBKDF2_ITERATIONS = 310000;
@@ -15,12 +14,48 @@ export function json(data, status = 200, extraHeaders = {}) {
 }
 
 export async function readJson(request) {
+  const MAX_SIZE = 1024 * 1024;
   const length = Number(request.headers.get("Content-Length") || 0);
-  if (length > 1024 * 1024) {
+
+  if (length > MAX_SIZE) {
     throw new Error("Request body is too large.");
   }
 
-  return await request.json();
+  if (!request.body) {
+    throw new Error("Request body is required.");
+  }
+
+  const reader = request.body.getReader();
+  const chunks = [];
+  let total = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      total += value.length;
+
+      if (total > MAX_SIZE) {
+        await reader.cancel();
+        throw new Error("Request body is too large.");
+      }
+
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const body = new Uint8Array(total);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return JSON.parse(new TextDecoder().decode(body));
 }
 
 export function textValue(value, max = 5000) {
