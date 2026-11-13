@@ -1,78 +1,60 @@
 import { dbRun } from "../../../_lib/db.js";
-import {
-  json,
-  readJson,
-  textValue,
-  validId,
-  validButtonUrl
-} from "../../../_lib/security.js";
+import { json, readJson, textValue } from "../../../_lib/security.js";
 import { adminRequest } from "../../../_lib/auth.js";
 
-export async function onRequestPut({ request, params, env }) {
+export async function onRequestPut({ request, env, params }) {
   try {
     const { response } = await adminRequest(request, env);
     if (response) return response;
 
-    if (!validId(params.id)) {
+    const id = Number(params.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
       return json({ error: "Invalid footer item ID." }, 400);
     }
 
     const body = await readJson(request);
-    const label = textValue(body.label, 100);
-    const url = textValue(body.url, 500);
-    const sectionId = Number(body.section_id);
-    const sortOrder = Number.isInteger(body.sort_order)
-      ? body.sort_order
-      : 0;
-    const isActive = body.is_active === false ? 0 : 1;
+    const name = textValue(body.name, 100);
+    const description = textValue(body.description || "", 1000);
 
-    if (!label || !validButtonUrl(url) || !validId(String(sectionId))) {
-      return json({ error: "Invalid footer item details." }, 400);
+    if (!name) {
+      return json({ error: "Item name is required." }, 400);
     }
 
     const result = await dbRun(
       env,
-      `UPDATE footer_items
-       SET section_id = ?, label = ?, url = ?, sort_order = ?, is_active = ?
-       WHERE id = ?`,
-      sectionId,
-      label,
-      url,
-      sortOrder,
-      isActive,
-      Number(params.id)
+      "UPDATE footer_items SET name = ?, description = ? WHERE id = ?",
+      name,
+      description,
+      id
     );
 
-    if (!result.meta?.changes) {
+    if (!result?.meta?.changes) {
       return json({ error: "Footer item not found." }, 404);
     }
 
     return json({ ok: true });
-  } catch (error) {
-    if (error.message === "Request body is too large.") {
-      return json({ error: error.message }, 413);
-    }
-
+  } catch {
     return json({ error: "Unable to update footer item." }, 500);
   }
 }
 
-export async function onRequestDelete({ request, params, env }) {
+export async function onRequestDelete({ request, env, params }) {
   try {
     const { response } = await adminRequest(request, env);
     if (response) return response;
 
-    if (!validId(params.id)) {
+    const id = Number(params.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
       return json({ error: "Invalid footer item ID." }, 400);
     }
 
     const result = await dbRun(
       env,
       "DELETE FROM footer_items WHERE id = ?",
-      Number(params.id)
+      id
     );
 
-    if (!result.meta?.changes) {
+    if (!result?.meta?.changes) {
       return json({ error: "Footer item not found." }, 404);
     }
 
