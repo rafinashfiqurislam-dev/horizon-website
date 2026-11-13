@@ -1,6 +1,11 @@
-
 import { dbFirst, dbRun } from "../_lib/db.js";
-import { hashPassword, json, readJson, sameOrigin, textValue } from "../_lib/security.js";
+import {
+  hashPassword,
+  json,
+  readJson,
+  sameOrigin,
+  textValue
+} from "../_lib/security.js";
 
 export async function onRequestPost({ request, env }) {
   try {
@@ -10,15 +15,6 @@ export async function onRequestPost({ request, env }) {
 
     if (!env.SETUP_TOKEN || env.SETUP_TOKEN.length < 32) {
       return json({ error: "Setup is not configured." }, 503);
-    }
-
-    const existing = await dbFirst(
-      env,
-      "SELECT id FROM admins LIMIT 1"
-    );
-
-    if (existing) {
-      return json({ error: "Admin setup is already complete." }, 409);
     }
 
     const body = await readJson(request);
@@ -47,6 +43,15 @@ export async function onRequestPost({ request, env }) {
       }, 400);
     }
 
+    const existing = await dbFirst(
+      env,
+      "SELECT id FROM admins LIMIT 1"
+    );
+
+    if (existing) {
+      return json({ error: "Admin setup is already complete." }, 409);
+    }
+
     const passwordHash = await hashPassword(password);
 
     await dbRun(
@@ -60,14 +65,7 @@ export async function onRequestPost({ request, env }) {
       ok: true,
       message: "Admin account created. Remove the SETUP_TOKEN secret after setup."
     }, 201);
-  } catch (error) {
-    if (error.message === "Request body is too large.") {
-      return json({ error: error.message }, 413);
-    }
-
-    return json({
-      error: "Admin setup failed."
-    }, 500);
+  } catch {
+    return json({ error: "Admin setup failed." }, 500);
   }
-        }
-      
+}
