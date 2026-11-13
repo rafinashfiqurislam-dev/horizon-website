@@ -27,12 +27,12 @@ export async function onRequestPost({ request, env }) {
     const username = textValue(body.username, 50);
     const password = body.password;
 
-    if (!/^[A-Za-z0-9_.-]{3,50}$/.test(username)) {
-      return json({ error: "Invalid username." }, 400);
+    if (!/^[A-Za-z0-9_.-]{2,50}$/.test(username)) {
+      return json({ error: "Username must be 2–50 characters." }, 400);
     }
 
-    if (typeof password !== "string" || password.length < 12 || password.length > 128) {
-      return json({ error: "Password must be 12–128 characters." }, 400);
+    if (typeof password !== "string" || password.length < 4 || password.length > 128) {
+      return json({ error: "Password must be 4–128 characters." }, 400);
     }
 
     const existing = await dbFirst(
@@ -57,4 +57,4 @@ export async function onRequestPost({ request, env }) {
   } catch {
     return json({ error: "Admin setup failed." }, 500);
   }
-}
+  }
