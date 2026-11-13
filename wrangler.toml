@@ -7,7 +7,3 @@ pages_build_output_dir = "./public"
 binding = "DB"
 database_name = "horizon-db"
 database_id = "9f53ec55-c75c-4a40-b7c0-32839779f0ef"
-
-[[r2_buckets]]
-binding = "UPLOADS"
-bucket_name = "horizon-uploads"
