@@ -1,11 +1,5 @@
-import { dbRun, getInsertId } from "../../../_lib/db.js";
-import {
-  json,
-  readJson,
-  textValue,
-  validId,
-  validButtonUrl
-} from "../../../_lib/security.js";
+import { dbFirst, dbRun, getInsertId } from "../../../_lib/db.js";
+import { json, readJson, textValue } from "../../../_lib/security.js";
 import { adminRequest } from "../../../_lib/auth.js";
 
 export async function onRequestPost({ request, env }) {
@@ -15,31 +9,33 @@ export async function onRequestPost({ request, env }) {
 
     const body = await readJson(request);
     const sectionId = Number(body.section_id);
-    const label = textValue(body.label, 100);
-    const url = textValue(body.url, 500);
-    const sortOrder = Number.isInteger(body.sort_order)
-      ? body.sort_order
-      : 0;
+    const name = textValue(body.name, 100);
+    const description = textValue(body.description || "", 1000);
 
-    if (!validId(String(sectionId)) || !label || !validButtonUrl(url)) {
-      return json({ error: "Invalid footer item details." }, 400);
+    if (!Number.isSafeInteger(sectionId) || sectionId < 1 || !name) {
+      return json({ error: "Valid section and item name are required." }, 400);
+    }
+
+    const section = await dbFirst(
+      env,
+      "SELECT id FROM footer_sections WHERE id = ?",
+      sectionId
+    );
+
+    if (!section) {
+      return json({ error: "Footer section not found." }, 404);
     }
 
     const result = await dbRun(
       env,
-      "INSERT INTO footer_items (section_id, label, url, sort_order, is_active) VALUES (?, ?, ?, ?, 1)",
+      "INSERT INTO footer_items (section_id, name, description) VALUES (?, ?, ?)",
       sectionId,
-      label,
-      url,
-      sortOrder
+      name,
+      description
     );
 
     return json({ ok: true, id: getInsertId(result) }, 201);
-  } catch (error) {
-    if (error.message === "Request body is too large.") {
-      return json({ error: error.message }, 413);
-    }
-
+  } catch {
     return json({ error: "Unable to create footer item." }, 500);
   }
 }
