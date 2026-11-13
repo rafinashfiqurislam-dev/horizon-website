@@ -1,4 +1,4 @@
-import { json } from "../../_lib/security.js";
+import { json } from "../_lib/security.js";
 
 export async function onRequestGet({ params, env }) {
   try {
@@ -34,4 +34,4 @@ export async function onRequestGet({ params, env }) {
   } catch {
     return json({ error: "Unable to load image." }, 500);
   }
-}
+                        }
