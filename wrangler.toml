@@ -1,0 +1,13 @@
+
+name = "horizon-website"
+compatibility_date = "2026-11-13"
+pages_build_output_dir = "./public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "horizon-db"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "UPLOADS"
+bucket_name = "horizon-uploads"
