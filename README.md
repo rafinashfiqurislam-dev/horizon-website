@@ -142,3 +142,4 @@ For larger production deployments, consider migrating SQLite to PostgreSQL and i
 **HORIZON — Think Beyond.**
 
 Building ideas into meaningful digital experiences and exploring what technology can make possible.
+Cloudflare deployment update.
