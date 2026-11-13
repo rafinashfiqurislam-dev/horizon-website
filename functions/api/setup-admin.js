@@ -14,16 +14,7 @@ export async function onRequestPost({ request, env }) {
       return json({ error: "Invalid request origin." }, 403);
     }
 
-    if (!env.ADMIN_SETUP_KEY || env.ADMIN_SETUP_KEY.length < 32) {
-      return json({ error: "Admin setup is not configured." }, 503);
-    }
-
     const body = await readJson(request);
-
-    if (body.setupKey !== env.ADMIN_SETUP_KEY) {
-      return json({ error: "Incorrect setup key." }, 403);
-    }
-
     const username = textValue(body.username, 50);
     const password = body.password;
 
@@ -31,8 +22,8 @@ export async function onRequestPost({ request, env }) {
       return json({ error: "Username must be 2–50 characters." }, 400);
     }
 
-    if (typeof password !== "string" || password.length < 4 || password.length > 128) {
-      return json({ error: "Password must be 4–128 characters." }, 400);
+    if (typeof password !== "string" || password.length < 12 || password.length > 128) {
+      return json({ error: "Password must be 12–128 characters." }, 400);
     }
 
     const existing = await dbFirst(
@@ -54,7 +45,8 @@ export async function onRequestPost({ request, env }) {
     );
 
     return json({ ok: true, message: "Admin account created." }, 201);
-  } catch {
+  } catch (error) {
+    console.error("Admin setup failed:", error);
     return json({ error: "Admin setup failed." }, 500);
   }
-  }
+}
