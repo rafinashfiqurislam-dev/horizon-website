@@ -1,60 +1,144 @@
-# HORIZON Corporate Website
 
-A starter full-stack corporate website and admin content manager built with Node.js, Express and SQLite.
+# HORIZON — Think Beyond
+
+HORIZON is a technology company focused on building innovative digital products and software solutions for the future.
+
+Our vision is to contribute to technological progress through creativity, innovation, and meaningful digital experiences.
 
 ## Features
-- Responsive HORIZON landing page with parallax-style hero image, company introduction and tagline.
-- Dynamic Mission and Vision content, including detail modal.
-- Product/service cards with image, short perception, CTA, publish/draft/coming-soon state and optional publish date.
-- Support page with FAQ search, contact form and feedback form.
-- Admin manager for home content, products/services, bilingual FAQ entries, message inbox (read/unread/all), feedback and footer sections/items.
-- SQLite database, password-hashed admin account, session login, login rate limit, upload size/type limits.
 
-## Requirements
-- Node.js 20+
-- npm
+- Responsive corporate website.
+- Modern homepage with a parallax-style hero section.
+- Company introduction, Mission, and Vision sections.
+- Dynamic product and service cards.
+- Individual product detail pages.
+- Dedicated Support page.
+- FAQ section with search functionality.
+- Contact message and feedback forms.
+- Admin Website Manager.
+- Product and service management.
+- FAQ management in English and Bangla.
+- Message inbox and feedback management.
+- Footer content management.
+- Image upload functionality.
+- SQLite database.
+- Admin authentication and session management.
 
-## Run locally
-1. Extract the ZIP.
-2. In this folder run `npm install`.
-3. Copy `.env.example` to `.env`.
-4. Change `SESSION_SECRET` and `ADMIN_PASSWORD` in `.env`.
-5. Run `npm start`.
-6. Open `http://localhost:3000` for the public website.
-7. Open `http://localhost:3000/admin` for Website Manager.
+## Technology Stack
 
-Default development login (only if you did not configure `.env`):
-- Username: `admin`
-- Password: `ChangeMe123!`
+- Node.js
+- Express.js
+- SQLite
+- HTML5
+- CSS3
+- JavaScript
 
-**Change the default password before deployment.** The server creates the first admin account on first database initialization. If you change the environment password after the database has already been created, it will not automatically replace the existing admin password.
+## Project Structure
 
-## Deploying
-GitHub stores the source code; it does not run this Node.js backend. Deploy the project to a Node.js hosting provider that supports persistent storage (for SQLite and uploaded images), set the environment variables from `.env.example`, and attach a persistent disk/volume mounted to the project `data/` and `public/uploads/` directories. Use HTTPS and `NODE_ENV=production`.
-
-If your host uses ephemeral filesystems, SQLite data and uploads may be lost on redeploy/restart. For production scale, migrate SQLite to managed PostgreSQL and image uploads to object storage.
-
-## Important scope notes
-- This is a working first release/starter, not a fully audited enterprise CMS.
-- The FAQ manager stores English/Bangla questions and administrator-written answers. The public support page currently displays matching questions; it does not generate AI answers or use an AI service.
-- Product/service cards link to the URL you provide. A dedicated rich product detail page and product-specific image gallery can be added as a next iteration.
-- The manager image upload returns a path. Copy that path into the relevant image field and save.
-- Change the admin password and session secret before exposing the manager publicly.
-
-## Project structure
 ```text
 horizon-website/
-  server.js
-  package.json
-  .env.example
-  public/
-    index.html
-    style.css
-    app.js
-    support.html
-    admin.html
-    admin.css
-    admin.js
-    uploads/
-  data/                 # created at runtime; keep persistent
+│
+├── server.js
+├── package.json
+├── .env.example
+├── .gitignore
+├── README.md
+│
+└── public/
+    ├── index.html
+    ├── style.css
+    ├── app.js
+    ├── item.html
+    ├── support.html
+    ├── admin.html
+    ├── admin.css
+    ├── admin.js
+    │
+    └── uploads/
+        └── .gitkeep
 ```
+
+The `data/` directory is created automatically when the application starts.
+
+## Requirements
+
+- Node.js 20 or later
+- npm
+
+## Local Installation
+
+1. Download or clone this repository.
+2. Open the project directory in a terminal.
+3. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+4. Copy `.env.example` and create a file named `.env`.
+5. Configure your own secure environment variables in `.env`.
+6. Start the application:
+
+   ```bash
+   npm start
+   ```
+
+7. Open the website:
+
+   `http://localhost:3000`
+
+8. Open the Website Manager:
+
+   `http://localhost:3000/admin`
+
+## Environment Variables
+
+Configure the following variables in your `.env` file:
+
+```env
+PORT=3000
+SESSION_SECRET=your-unique-long-random-secret
+ADMIN_USERNAME=your-admin-username
+ADMIN_PASSWORD=your-strong-admin-password
+```
+
+Never upload `.env` to GitHub or share your private credentials.
+
+## Deployment
+
+GitHub stores the source code but does not run the Node.js backend.
+
+To deploy HORIZON:
+
+- Use a hosting provider that supports Node.js applications.
+- Configure the environment variables securely.
+- Enable HTTPS.
+- Set `NODE_ENV=production`.
+- Configure persistent storage for the SQLite database and uploaded images.
+
+The `data/` and `public/uploads/` directories must retain their contents across application restarts and redeployments.
+
+For larger production deployments, consider migrating SQLite to PostgreSQL and image uploads to dedicated object storage.
+
+## Important Notes
+
+- This project is an initial working release and has not been presented as a fully audited enterprise system.
+- The Support FAQ displays administrator-managed questions and answers. It does not currently generate AI responses.
+- Product and service cards use the URLs configured by the administrator.
+- Product detail pages use `item.html`.
+- Uploaded images must be saved using the paths returned by the upload system.
+- Configure secure admin credentials and a unique session secret before deployment.
+
+## Security
+
+- Never commit `.env`.
+- Never publish passwords, API keys, or private credentials.
+- Use a strong, unique admin password.
+- Keep dependencies updated.
+- Use HTTPS in production.
+
+## Project Vision
+
+**HORIZON — Think Beyond.**
+
+Building ideas into meaningful digital experiences and exploring what technology can make possible.
