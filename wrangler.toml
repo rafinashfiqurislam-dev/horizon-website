@@ -6,7 +6,7 @@ pages_build_output_dir = "./public"
 [[d1_databases]]
 binding = "DB"
 database_name = "horizon-db"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "9f53ec55-c75c-4a40-b7c0-32839779f0ef"
 
 [[r2_buckets]]
 binding = "UPLOADS"
