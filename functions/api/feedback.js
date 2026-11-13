@@ -14,7 +14,7 @@ export async function onRequestGet({ request, env }) {
 
     const rows = await dbAll(
       env,
-      "SELECT * FROM feedback ORDER BY created_at DESC LIMIT 500"
+      "SELECT id, email, message, created_at FROM feedback ORDER BY id DESC LIMIT 500"
     );
 
     return json(rows);
@@ -30,18 +30,16 @@ export async function onRequestPost({ request, env }) {
     }
 
     const body = await readJson(request);
-    const name = textValue(body.name, 80);
     const email = textValue(body.email, 254);
     const message = textValue(body.message, 2000);
 
-    if (!name || !validEmail(email) || !message) {
-      return json({ error: "Please provide valid feedback details." }, 400);
+    if (!message || (email && !validEmail(email))) {
+      return json({ error: "Please provide a valid email and feedback message." }, 400);
     }
 
     await dbRun(
       env,
-      "INSERT INTO feedback (name, email, message) VALUES (?, ?, ?)",
-      name,
+      "INSERT INTO feedback (email, message) VALUES (?, ?)",
       email,
       message
     );
@@ -54,4 +52,4 @@ export async function onRequestPost({ request, env }) {
 
     return json({ error: "Unable to submit feedback." }, 500);
   }
-}
+      }
