@@ -35,13 +35,17 @@ export function requireSameOrigin(request) {
 }
 
 export async function adminRequest(request, env) {
-  const originError = requireSameOrigin(request);
+  // GET and HEAD requests do not require an Origin header.
+  // All other methods must pass the same-origin check.
+  if (!["GET", "HEAD"].includes(request.method)) {
+    const originError = requireSameOrigin(request);
 
-  if (originError) {
-    return {
-      admin: null,
-      response: originError
-    };
+    if (originError) {
+      return {
+        admin: null,
+        response: originError
+      };
+    }
   }
 
   return await requireAdmin(request, env);
