@@ -1,18 +1,14 @@
 import { dbRun } from "../../../_lib/db.js";
-import {
-  json,
-  readJson,
-  textValue,
-  validId
-} from "../../../_lib/security.js";
+import { json, readJson, textValue } from "../../../_lib/security.js";
 import { adminRequest } from "../../../_lib/auth.js";
 
-export async function onRequestPut({ request, params, env }) {
+export async function onRequestPut({ request, env, params }) {
   try {
     const { response } = await adminRequest(request, env);
     if (response) return response;
 
-    if (!validId(params.id)) {
+    const id = Number(params.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
       return json({ error: "Invalid section ID." }, 400);
     }
 
@@ -23,55 +19,43 @@ export async function onRequestPut({ request, params, env }) {
       return json({ error: "Section title is required." }, 400);
     }
 
-    const sortOrder = Number.isInteger(body.sort_order)
-      ? body.sort_order
-      : 0;
-    const isActive = body.is_active === false ? 0 : 1;
-
-    const result = await dbRun(
+    await dbRun(
       env,
-      "UPDATE footer_sections SET title = ?, sort_order = ?, is_active = ? WHERE id = ?",
+      "UPDATE footer_sections SET title = ? WHERE id = ?",
       title,
-      sortOrder,
-      isActive,
-      Number(params.id)
+      id
     );
 
-    if (!result.meta?.changes) {
-      return json({ error: "Section not found." }, 404);
-    }
-
     return json({ ok: true });
-  } catch (error) {
-    if (error.message === "Request body is too large.") {
-      return json({ error: error.message }, 413);
-    }
-
+  } catch {
     return json({ error: "Unable to update footer section." }, 500);
   }
 }
 
-export async function onRequestDelete({ request, params, env }) {
+export async function onRequestDelete({ request, env, params }) {
   try {
     const { response } = await adminRequest(request, env);
     if (response) return response;
 
-    if (!validId(params.id)) {
+    const id = Number(params.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
       return json({ error: "Invalid section ID." }, 400);
     }
 
-    const result = await dbRun(
+    await dbRun(
       env,
-      "DELETE FROM footer_sections WHERE id = ?",
-      Number(params.id)
+      "DELETE FROM footer_items WHERE section_id = ?",
+      id
     );
 
-    if (!result.meta?.changes) {
-      return json({ error: "Section not found." }, 404);
-    }
+    await dbRun(
+      env,
+      "DELETE FROM footer_sections WHERE id = ?",
+      id
+    );
 
     return json({ ok: true });
   } catch {
     return json({ error: "Unable to delete footer section." }, 500);
   }
-}
+    }
