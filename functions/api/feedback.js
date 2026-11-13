@@ -1,3 +1,4 @@
+
 import { dbAll, dbRun } from "../_lib/db.js";
 import {
   json,
@@ -34,7 +35,9 @@ export async function onRequestPost({ request, env }) {
     const message = textValue(body.message, 2000);
 
     if (!message || (email && !validEmail(email))) {
-      return json({ error: "Please provide a valid email and feedback message." }, 400);
+      return json({
+        error: "Please provide a valid email and feedback message."
+      }, 400);
     }
 
     await dbRun(
@@ -52,4 +55,4 @@ export async function onRequestPost({ request, env }) {
 
     return json({ error: "Unable to submit feedback." }, 500);
   }
-      }
+}
