@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,32 +14,38 @@
     label{display:block;margin:18px 0 7px;font-size:14px}
     input{width:100%;padding:13px;border-radius:9px;border:1px solid #34445f;background:#091222;color:white;font:inherit}
     button{width:100%;margin-top:22px;padding:14px;border:0;border-radius:9px;background:#77a9ff;color:#07101e;font-weight:700;font-size:16px}
+    button:disabled{opacity:.6}
     #message{margin-top:16px;overflow-wrap:anywhere}
   </style>
 </head>
 <body>
 <main>
   <h1>Create HORIZON Admin</h1>
-  <p>This one-time setup works only while no admin account exists. Keep your setup key and password private.</p>
+  <p>Create your admin account. Keep your setup key and password private.</p>
+
   <form id="setup">
     <label for="setupKey">Admin Setup Key</label>
     <input id="setupKey" type="password" minlength="32" required autocomplete="off">
 
     <label for="username">Admin Username</label>
-    <input id="username" value="admin" minlength="3" maxlength="50" required autocomplete="username">
+    <input id="username" value="admin" minlength="2" maxlength="50" required autocomplete="username">
 
-    <label for="password">Admin Password (12–128 characters)</label>
-    <input id="password" type="password" minlength="12" maxlength="128" required autocomplete="new-password">
+    <label for="password">Admin Password</label>
+    <input id="password" type="password" minlength="4" maxlength="128" required autocomplete="new-password">
 
     <button type="submit">Create Admin Account</button>
   </form>
+
   <p id="message" role="status"></p>
 </main>
+
 <script>
 document.getElementById("setup").addEventListener("submit", async (event) => {
   event.preventDefault();
+
   const button = event.currentTarget.querySelector("button");
   const message = document.getElementById("message");
+
   button.disabled = true;
   message.textContent = "Creating account…";
 
@@ -54,7 +61,10 @@ document.getElementById("setup").addEventListener("submit", async (event) => {
     });
 
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "Setup failed.");
+
+    if (!response.ok) {
+      throw new Error(result.error || "Setup failed.");
+    }
 
     event.currentTarget.reset();
     message.textContent = "Admin account created. Open /admin.html and sign in.";
