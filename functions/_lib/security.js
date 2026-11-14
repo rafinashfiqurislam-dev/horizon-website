@@ -1,6 +1,7 @@
+
 const SESSION_COOKIE = "horizon.sid";
 const SESSION_SECONDS = 8 * 60 * 60;
-const PBKDF2_ITERATIONS = 310000;
+const PBKDF2_ITERATIONS = 100000;
 
 export function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -17,13 +18,8 @@ export async function readJson(request) {
   const MAX_SIZE = 1024 * 1024;
   const length = Number(request.headers.get("Content-Length") || 0);
 
-  if (length > MAX_SIZE) {
-    throw new Error("Request body is too large.");
-  }
-
-  if (!request.body) {
-    throw new Error("Request body is required.");
-  }
+  if (length > MAX_SIZE) throw new Error("Request body is too large.");
+  if (!request.body) throw new Error("Request body is required.");
 
   const reader = request.body.getReader();
   const chunks = [];
@@ -33,14 +29,12 @@ export async function readJson(request) {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
       total += value.length;
 
       if (total > MAX_SIZE) {
         await reader.cancel();
         throw new Error("Request body is too large.");
       }
-
       chunks.push(value);
     }
   } finally {
@@ -49,7 +43,6 @@ export async function readJson(request) {
 
   const body = new Uint8Array(total);
   let offset = 0;
-
   for (const chunk of chunks) {
     body.set(chunk, offset);
     offset += chunk.length;
@@ -76,7 +69,6 @@ export function validEmail(value) {
 export function validImageUrl(value) {
   if (!value) return true;
   if (typeof value !== "string" || value.length > 1000) return false;
-
   return value.startsWith("/uploads/") ||
     value.startsWith("https://") ||
     value.startsWith("http://");
@@ -85,7 +77,6 @@ export function validImageUrl(value) {
 export function validButtonUrl(value) {
   if (!value) return true;
   if (typeof value !== "string" || value.length > 2000) return false;
-
   if (value.startsWith("/") && !value.startsWith("//")) return true;
 
   try {
@@ -99,7 +90,6 @@ export function validButtonUrl(value) {
 function toBase64Url(bytes) {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-
   return btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
@@ -134,7 +124,9 @@ async function derivePassword(password, salt, iterations) {
 }
 
 export async function hashPassword(password) {
-  if (typeof password !== "string" || password.length < 12 || password.length > 128) {
+  if (typeof password !== "string" ||
+      password.length < 12 ||
+      password.length > 128) {
     throw new Error("Password must be 12 to 128 characters.");
   }
 
@@ -157,9 +149,9 @@ export async function verifyPassword(password, stored) {
     if (parts.length !== 4 || parts[0] !== "pbkdf2-sha256") return false;
 
     const iterations = Number(parts[1]);
-    if (!Number.isInteger(iterations) || iterations < 100000 || iterations > 1000000) {
-      return false;
-    }
+    if (!Number.isInteger(iterations) ||
+        iterations < 100000 ||
+        iterations > 100000) return false;
 
     const salt = fromBase64Url(parts[2]);
     const expected = fromBase64Url(parts[3]);
@@ -233,9 +225,8 @@ export async function getSession(request, secret) {
       new TextDecoder().decode(fromBase64Url(parts[0]))
     );
 
-    if (!session.id || !session.username || session.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
+    if (!session.id || !session.username ||
+        session.exp < Math.floor(Date.now() / 1000)) return null;
 
     return { id: session.id, username: session.username };
   } catch {
