@@ -14,15 +14,29 @@ export async function onRequestPost({ request, env }) {
       return json({ error: "Invalid request origin." }, 403);
     }
 
+    if (!env.ADMIN_SETUP_KEY || env.ADMIN_SETUP_KEY.length < 32) {
+      return json({ error: "Admin setup is not configured." }, 503);
+    }
+
     const body = await readJson(request);
+
+    const setupKey = textValue(body.setupKey, 200);
     const username = textValue(body.username, 50);
     const password = body.password;
+
+    if (setupKey !== env.ADMIN_SETUP_KEY) {
+      return json({ error: "Incorrect setup key." }, 403);
+    }
 
     if (!/^[A-Za-z0-9_.-]{2,50}$/.test(username)) {
       return json({ error: "Username must be 2–50 characters." }, 400);
     }
 
-    if (typeof password !== "string" || password.length < 12 || password.length > 128) {
+    if (
+      typeof password !== "string" ||
+      password.length < 12 ||
+      password.length > 128
+    ) {
       return json({ error: "Password must be 12–128 characters." }, 400);
     }
 
@@ -44,9 +58,14 @@ export async function onRequestPost({ request, env }) {
       passwordHash
     );
 
-    return json({ ok: true, message: "Admin account created." }, 201);
+    return json({
+      ok: true,
+      message: "Admin account created."
+    }, 201);
+
   } catch (error) {
     console.error("Admin setup failed:", error);
     return json({ error: "Admin setup failed." }, 500);
   }
-}
+  }
+      
