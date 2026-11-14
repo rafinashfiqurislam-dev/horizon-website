@@ -15,7 +15,9 @@ export async function onRequestPost({ request, env }) {
     }
 
     if (!env.ADMIN_SETUP_KEY || env.ADMIN_SETUP_KEY.length < 32) {
-      return json({ error: "Admin setup is not configured." }, 503);
+      return json({
+        error: "Admin setup is not configured. Check ADMIN_SETUP_KEY."
+      }, 503);
     }
 
     const body = await readJson(request);
@@ -29,7 +31,9 @@ export async function onRequestPost({ request, env }) {
     }
 
     if (!/^[A-Za-z0-9_.-]{2,50}$/.test(username)) {
-      return json({ error: "Username must be 2–50 characters." }, 400);
+      return json({
+        error: "Username must be 2–50 characters."
+      }, 400);
     }
 
     if (
@@ -37,7 +41,9 @@ export async function onRequestPost({ request, env }) {
       password.length < 12 ||
       password.length > 128
     ) {
-      return json({ error: "Password must be 12–128 characters." }, 400);
+      return json({
+        error: "Password must be 12–128 characters."
+      }, 400);
     }
 
     const existing = await dbFirst(
@@ -65,7 +71,11 @@ export async function onRequestPost({ request, env }) {
 
   } catch (error) {
     console.error("Admin setup failed:", error);
-    return json({ error: "Admin setup failed." }, 500);
+
+    return json({
+      error: error instanceof Error
+        ? error.message
+        : "Unknown server error."
+    }, 500);
   }
   }
-      
