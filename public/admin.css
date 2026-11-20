@@ -4,6 +4,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: #f2f5f9;
@@ -398,4 +402,4 @@ select:focus {
     flex-direction: column;
     gap: 10px;
   }
-  }
+    }
