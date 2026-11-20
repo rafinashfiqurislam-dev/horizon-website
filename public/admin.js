@@ -1,28 +1,834 @@
-const $=s=>document.querySelector(s);let active='home',editingItem=null,editingFaq=null,footerData={};
-async function api(url,opts={}){const r=await fetch('/api'+url,{headers:{'Content-Type':'application/json',...(opts.headers||{})},...opts});let d={};try{d=await r.json()}catch{}if(!r.ok)throw Error(d.error||'Request failed');return d}
-function notice(t,err=false){$('#notice').innerHTML=`<div class="notice ${err?'error':''}">${esc(t)}</div>`;setTimeout(()=>$('#notice').innerHTML='',4000)}
-function esc(s=''){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function check(){const d=await api('/me');if(d.admin){$('#login').hidden=true;$('#app').hidden=false;render()}else{$('#login').hidden=false;$('#app').hidden=true}}
-$('#loginForm').addEventListener('submit',async e=>{e.preventDefault();try{await api('/login',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});$('#loginError').textContent='';check()}catch(x){$('#loginError').textContent=x.message}});
-$('#logout').onclick=async()=>{await api('/logout',{method:'POST'});check()};
-$('#nav').addEventListener('click',e=>{const b=e.target.closest('[data-tab]');if(b){active=b.dataset.tab;render()}});
-async function render(){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===active));const titles={home:'Home Page Manager',items:'Products & Services',faqs:'Question & Answer Manager',messages:'Message Inquiries',feedback:'Feedback Manager',footer:'Footer Manager'};$('#pageTitle').textContent=titles[active];const p=$('#panel');p.innerHTML='<div class="card">Loading…</div>';try{if(active==='home')await home(p);if(active==='items')await items(p);if(active==='faqs')await faqs(p);if(active==='messages')await messages(p);if(active==='feedback')await feedback(p);if(active==='footer')await footer(p)}catch(e){p.innerHTML=`<div class="card">${esc(e.message)}</div>`}}
-function field(label,key,value='',type='text',full=false){return `<div class="field ${full?'full':''}"><label>${esc(label)}</label>${type==='textarea'?`<textarea name="${key}">${esc(value)}</textarea>`:`<input name="${key}" type="${type}" value="${esc(value)}">`}</div>`}
-async function home(p){const d=await api('/site'),c=d.content||{};p.innerHTML=`<form id="homeForm" class="card"><h2>Company introduction</h2>${field('Company introduction','company_intro',c.company_intro,'textarea',true)}${field('Company tagline','tagline',c.tagline)}<h2>Mission</h2><div class="grid">${field('Mission heading','mission_heading',c.mission_heading)}${field('Short perception','mission_short',c.mission_short)}${field('Mission description (shown after button)','mission_description',c.mission_description,'textarea',true)}</div><h2>Vision</h2><div class="grid">${field('Vision heading','vision_heading',c.vision_heading)}${field('Short perception','vision_short',c.vision_short)}${field('Vision description (shown after button)','vision_description',c.vision_description,'textarea',true)}</div><h2>Images & Support</h2><div class="grid">${field('Hero image path','hero_image',c.hero_image)}${field('Support background image path','support_image',c.support_image)}${field('Support tagline','support_line',c.support_line,'textarea',true)}</div><div class="field"><label>Upload an image (copy the generated path into either image path field)</label><input type="file" id="homeUpload" accept="image/*"></div><button type="button" class="secondary" id="uploadHome">Upload image</button> <button class="primary">Save home page</button></form>`;
-$('#homeForm').onsubmit=async e=>{e.preventDefault();await api('/content',{method:'PUT',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});notice('Home page content saved.')};
-$('#uploadHome').onclick=async()=>{const f=$('#homeUpload').files[0];if(!f)return notice('Choose an image first.',true);const fd=new FormData();fd.append('image',f);const r=await fetch('/api/upload',{method:'POST',body:fd});const d=await r.json();if(!r.ok)return notice(d.error,true);const input=$('#homeForm').querySelector('[name="hero_image"]');input.value=d.url;notice('Uploaded. Copy the path to the image field you want.')}}
-async function items(p){const data=await api('/items');p.innerHTML=`<div class="card"><h2>${editingItem?'Edit':'Add'} product or service</h2><form id="itemForm" class="grid">${field('Content type','type',editingItem?.type||'product')}<div class="field"><label>Status</label><select name="status"><option value="draft">Draft (hidden)</option><option value="published" ${editingItem?.status==='published'?'selected':''}>Published</option><option value="coming_soon" ${editingItem?.status==='coming_soon'?'selected':''}>Coming soon</option></select></div>${field('Name','name',editingItem?.name||'')}${field('Short perception (shown on card)','short_perception',editingItem?.short_perception||'')}${field('Featured image path','image',editingItem?.image||'')}${field('Button text','button_text',editingItem?.button_text||'Explore')}${field('Button URL','button_url',editingItem?.button_url||'','url')}${field('Publish date (optional)','publish_at',editingItem?.publish_at||'','date')}${field('Description (shown on item details placeholder)','description',editingItem?.description||'','textarea',true)}<div class="field full"><label>Featured image upload</label><input type="file" id="itemUpload" accept="image/*"></div><div class="actions field full"><button type="button" class="secondary" id="uploadItem">Upload image</button><button class="primary">Save item</button><button type="button" class="secondary" id="cancelEdit">Clear</button></div></form></div><div class="card"><h2>Existing products & services</h2>${data.map(x=>`<div class="rowitem"><div><b>${esc(x.name)}</b><div class="muted">${esc(x.type)} · ${esc(x.status)} · ${esc(x.short_perception)}</div></div><div class="actions"><button class="secondary" data-edit="${x.id}">Edit</button><button class="danger" data-delete="${x.id}">Delete</button></div></div>`).join('')||'<p class="muted">No items yet.</p>'}</div>`;
-$('#cancelEdit').onclick=()=>{editingItem=null;render()};$('#uploadItem').onclick=async()=>{const f=$('#itemUpload').files[0];if(!f)return notice('Choose an image.',true);const fd=new FormData();fd.append('image',f);const r=await fetch('/api/upload',{method:'POST',body:fd});const d=await r.json();if(!r.ok)return notice(d.error,true);$('#itemForm [name=image]').value=d.url;notice('Image uploaded.')};
-$('#itemForm').onsubmit=async e=>{e.preventDefault();const body=Object.fromEntries(new FormData(e.target));if(!body.name)return notice('Enter a name.',true);await api(editingItem?'/items/'+editingItem.id:'/items',{method:editingItem?'PUT':'POST',body:JSON.stringify(body)});editingItem=null;notice('Item saved.');render()};
-p.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{editingItem=data.find(x=>x.id==b.dataset.edit);render()});p.querySelectorAll('[data-delete]').forEach(b=>b.onclick=async()=>{if(confirm('Delete this item?')){await api('/items/'+b.dataset.delete,{method:'DELETE'});render()}})}
-async function faqs(p){const data=await api('/faqs');p.innerHTML=`<div class="card"><h2>${editingFaq?'Edit':'Add'} question & answer</h2><form id="faqForm" class="grid">${field('Product/service name','item_name',editingFaq?.item_name||'')}${field('Question (English)','question_en',editingFaq?.question_en||'')}${field('Question (বাংলা)','question_bn',editingFaq?.question_bn||'')}${field('Answer (admin-managed)','answer',editingFaq?.answer||'','textarea',true)}<div class="actions field full"><button class="primary">Save Q&A</button><button type="button" class="secondary" id="faqClear">Clear</button></div></form></div><div class="card"><h2>Questions and answers</h2>${data.map(x=>`<div class="rowitem"><div><b>${esc(x.item_name)} — ${esc(x.question_en)}</b><div class="muted">${esc(x.question_bn)}<br>${esc(x.answer)}</div></div><div class="actions"><button class="secondary" data-edit="${x.id}">Edit</button><button class="danger" data-del="${x.id}">Delete</button></div></div>`).join('')||'<p class="muted">No questions yet. Add product-specific questions above.</p>'}</div>`;
-$('#faqClear').onclick=()=>{editingFaq=null;render()};$('#faqForm').onsubmit=async e=>{e.preventDefault();await api(editingFaq?'/faqs/'+editingFaq.id:'/faqs',{method:editingFaq?'PUT':'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});editingFaq=null;notice('Question saved.');render()};p.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>{editingFaq=data.find(x=>x.id==b.dataset.edit);render()});p.querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{if(confirm('Delete question?')){await api('/faqs/'+b.dataset.del,{method:'DELETE'});render()}})}
-async function messages(p){const mode=window.msgMode||'all',data=await api('/messages?mode='+mode);p.innerHTML=`<div class="card"><div class="actions"><button class="secondary" data-mode="unread">Unread</button><button class="secondary" data-mode="read">Read</button><button class="secondary" data-mode="all">All</button></div>${data.map(x=>`<div class="rowitem"><div><b>${esc(x.email)}</b><div class="muted">${esc(x.created_at)} · ${x.is_read?'Read':'Unread'}</div><p>${esc(x.message)}</p></div><button class="secondary" data-read="${x.id}" data-value="${x.is_read?0:1}">${x.is_read?'Mark unread':'Mark read'}</button></div>`).join('')||'<p class="muted">No messages in this view.</p>'}</div>`;p.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{window.msgMode=b.dataset.mode;render()});p.querySelectorAll('[data-read]').forEach(b=>b.onclick=async()=>{await api('/messages/'+b.dataset.read,{method:'PATCH',body:JSON.stringify({is_read:Number(b.dataset.value)})});render()})}
-async function feedback(p){const data=await api('/feedback');p.innerHTML=`<div class="card"><h2>Received feedback</h2>${data.map(x=>`<div class="rowitem"><div><b>${esc(x.email||'Anonymous')}</b><div class="muted">${esc(x.created_at)}</div><p>${esc(x.message)}</p></div></div>`).join('')||'<p class="muted">No feedback yet.</p>'}</div>`}
-async function footer(p){const d=await api('/footer/manage');footerData=d;p.innerHTML=`<div class="card"><h2>Add new section</h2><form id="sectionForm" class="actions"><input name="title" placeholder="Section title (e.g. Company)" required><button class="primary">Add section</button></form></div>${d.sections.map(s=>`<div class="card"><div class="rowitem"><h2>${esc(s.title)}</h2><button class="danger" data-sec-del="${s.id}">Delete section</button></div><form class="actions" data-add-item="${s.id}"><input name="name" placeholder="Item name" required><input name="description" placeholder="Item description"><button class="primary">Add new item</button></form>${d.items.filter(i=>i.section_id===s.id).map(i=>`<div class="rowitem"><div><b>${esc(i.name)}</b><div class="muted">${esc(i.description)}</div></div><div class="actions"><button class="secondary" data-item-edit="${i.id}">Edit</button><button class="danger" data-item-del="${i.id}">Delete</button></div></div>`).join('')}</div>`).join('')}`;
-$('#sectionForm').onsubmit=async e=>{e.preventDefault();await api('/footer/sections',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});render()};
-p.querySelectorAll('[data-add-item]').forEach(f=>f.onsubmit=async e=>{e.preventDefault();await api('/footer/items',{method:'POST',body:JSON.stringify({...Object.fromEntries(new FormData(f)),section_id:f.dataset.addItem})});render()});
-p.querySelectorAll('[data-sec-del]').forEach(b=>b.onclick=async()=>{if(confirm('Delete section and its items?')){await api('/footer/sections/'+b.dataset.secDel,{method:'DELETE'});render()}});
-p.querySelectorAll('[data-item-del]').forEach(b=>b.onclick=async()=>{if(confirm('Delete item?')){await api('/footer/items/'+b.dataset.itemDel,{method:'DELETE'});render()}});
-p.querySelectorAll('[data-item-edit]').forEach(b=>b.onclick=async()=>{const i=d.items.find(x=>x.id==b.dataset.itemEdit);const name=prompt('Item name',i.name);if(name===null)return;const description=prompt('Item description',i.description);if(description===null)return;await api('/footer/items/'+i.id,{method:'PUT',body:JSON.stringify({name,description})});render()})}
-check().catch(()=>{});
+
+const $ = s => document.querySelector(s);
+
+let active = "home";
+let editingItem = null;
+let editingFaq = null;
+
+async function api(url, opts = {}) {
+  const r = await fetch("/api" + url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(opts.headers || {})
+    },
+    ...opts
+  });
+
+  let d = {};
+  try {
+    d = await r.json();
+  } catch {}
+
+  if (!r.ok) {
+    throw Error(d.error || "Request failed");
+  }
+
+  return d;
+}
+
+function esc(s = "") {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c]));
+}
+
+function notice(message, error = false) {
+  $("#notice").innerHTML =
+    `<div class="notice ${error ? "error" : ""}">${esc(message)}</div>`;
+
+  setTimeout(() => {
+    $("#notice").innerHTML = "";
+  }, 4000);
+}
+
+async function uploadImage(file) {
+  if (!file) {
+    throw Error("Please choose an image first.");
+  }
+
+  const form = new FormData();
+  form.append("image", file);
+
+  const response = await fetch("/api/upload", {
+    method: "POST",
+    body: form
+  });
+
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {}
+
+  if (!response.ok) {
+    throw Error(data.error || "Image upload failed.");
+  }
+
+  if (!data.url) {
+    throw Error("Image URL was not returned.");
+  }
+
+  return data.url;
+}
+
+async function check() {
+  const data = await api("/me");
+
+  if (data.admin) {
+    $("#login").hidden = true;
+    $("#app").hidden = false;
+    await render();
+  } else {
+    $("#login").hidden = false;
+    $("#app").hidden = true;
+  }
+}
+
+$("#loginForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  try {
+    await api("/login", {
+      method: "POST",
+      body: JSON.stringify(
+        Object.fromEntries(new FormData(event.target))
+      )
+    });
+
+    $("#loginError").textContent = "";
+    await check();
+
+  } catch (error) {
+    $("#loginError").textContent = error.message;
+  }
+});
+
+$("#logout").onclick = async () => {
+  try {
+    await api("/logout", { method: "POST" });
+    await check();
+  } catch (error) {
+    notice(error.message, true);
+  }
+};
+
+$("#nav").addEventListener("click", event => {
+  const button = event.target.closest("[data-tab]");
+
+  if (button) {
+    active = button.dataset.tab;
+    render();
+  }
+});
+
+async function render() {
+  document.querySelectorAll("[data-tab]").forEach(button => {
+    button.classList.toggle(
+      "active",
+      button.dataset.tab === active
+    );
+  });
+
+  const titles = {
+    home: "Home Page Manager",
+    images: "Image Manager",
+    items: "Products & Services",
+    faqs: "Question & Answer Manager",
+    messages: "Message Inquiries",
+    feedback: "Feedback Manager",
+    footer: "Footer Manager"
+  };
+
+  $("#pageTitle").textContent = titles[active] || "Manager";
+
+  const panel = $("#panel");
+  panel.innerHTML = '<div class="card">Loading...</div>';
+
+  try {
+    if (active === "home") await home(panel);
+    if (active === "images") await images(panel);
+    if (active === "items") await items(panel);
+    if (active === "faqs") await faqs(panel);
+    if (active === "messages") await messages(panel);
+    if (active === "feedback") await feedback(panel);
+    if (active === "footer") await footer(panel);
+
+  } catch (error) {
+    panel.innerHTML =
+      `<div class="card">${esc(error.message)}</div>`;
+  }
+}
+
+function field(label, key, value = "", type = "text", full = false) {
+  return `
+    <div class="field ${full ? "full" : ""}">
+      <label>${esc(label)}</label>
+      ${
+        type === "textarea"
+          ? `<textarea name="${key}">${esc(value)}</textarea>`
+          : `<input name="${key}" type="${type}" value="${esc(value)}">`
+      }
+    </div>
+  `;
+}
+
+/* HOME PAGE MANAGER */
+
+async function home(panel) {
+  const data = await api("/site");
+  const content = data.content || {};
+
+  panel.innerHTML = `
+    <form id="homeForm" class="card">
+
+      <h2>Company Introduction</h2>
+
+      ${field(
+        "Company introduction",
+        "company_intro",
+        content.company_intro,
+        "textarea",
+        true
+      )}
+
+      ${field("Company tagline", "tagline", content.tagline)}
+
+      <h2>Our Purpose / Mission</h2>
+
+      <div class="grid">
+        ${field("Mission heading", "mission_heading", content.mission_heading)}
+        ${field("Short perception", "mission_short", content.mission_short)}
+        ${field(
+          "Mission description",
+          "mission_description",
+          content.mission_description,
+          "textarea",
+          true
+        )}
+      </div>
+
+      <h2>Our Vision</h2>
+
+      <div class="grid">
+        ${field("Vision heading", "vision_heading", content.vision_heading)}
+        ${field("Short perception", "vision_short", content.vision_short)}
+        ${field(
+          "Vision description",
+          "vision_description",
+          content.vision_description,
+          "textarea",
+          true
+        )}
+      </div>
+
+      <h2>Help Center</h2>
+
+      ${field(
+        "Support tagline",
+        "support_line",
+        content.support_line,
+        "textarea",
+        true
+      )}
+
+      <button class="primary" type="submit">
+        Save Home Page Content
+      </button>
+
+    </form>
+  `;
+
+  $("#homeForm").onsubmit = async event => {
+    event.preventDefault();
+
+    try {
+      await api("/content", {
+        method: "PUT",
+        body: JSON.stringify(
+          Object.fromEntries(new FormData(event.target))
+        )
+      });
+
+      notice("Home page content saved.");
+
+    } catch (error) {
+      notice(error.message, true);
+    }
+  };
+}
+
+/* IMAGE MANAGER */
+
+async function images(panel) {
+  const data = await api("/site");
+  const content = data.content || {};
+
+  const purposeImage = content.purpose_image || "";
+  const supportImage = content.support_image || "";
+
+  panel.innerHTML = `
+    <div class="card">
+      <h2>Image Manager</h2>
+
+      <p class="muted">
+        Manage only the two background images used on the website.
+      </p>
+
+      <div class="image-manager-grid">
+
+        <div class="image-slot">
+          <h2>Earth Background</h2>
+
+          <p class="muted">
+            Background image for the Our Purpose section.
+          </p>
+
+          <div class="image-preview" id="purposePreview">
+            ${
+              purposeImage
+                ? `<img src="${esc(purposeImage)}" alt="Earth background preview">`
+                : `<div class="image-placeholder">No image uploaded</div>`
+            }
+          </div>
+
+          <label>Choose Earth background image</label>
+          <input
+            type="file"
+            id="purposeFile"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+          >
+
+          <label>Image URL</label>
+          <input
+            type="url"
+            id="purposeUrl"
+            value="${esc(purposeImage)}"
+            placeholder="Uploaded image URL"
+          >
+
+          <button
+            type="button"
+            class="secondary"
+            id="uploadPurpose"
+          >
+            Upload Earth Image
+          </button>
+        </div>
+
+        <div class="image-slot">
+          <h2>Ocean Background</h2>
+
+          <p class="muted">
+            Background image for the Help Center section.
+          </p>
+
+          <div class="image-preview" id="supportPreview">
+            ${
+              supportImage
+                ? `<img src="${esc(supportImage)}" alt="Ocean background preview">`
+                : `<div class="image-placeholder">No image uploaded</div>`
+            }
+          </div>
+
+          <label>Choose Ocean background image</label>
+          <input
+            type="file"
+            id="supportFile"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+          >
+
+          <label>Image URL</label>
+          <input
+            type="url"
+            id="supportUrl"
+            value="${esc(supportImage)}"
+            placeholder="Uploaded image URL"
+          >
+
+          <button
+            type="button"
+            class="secondary"
+            id="uploadSupport"
+          >
+            Upload Ocean Image
+          </button>
+        </div>
+
+      </div>
+
+      <div class="actions">
+        <button type="button" class="primary" id="saveImages">
+          Save Background Images
+        </button>
+      </div>
+    </div>
+  `;
+
+  function updatePreview(inputId, previewId) {
+    const url = $(inputId).value.trim();
+
+    if (!url) {
+      $(previewId).innerHTML =
+        '<div class="image-placeholder">No image uploaded</div>';
+      return;
+    }
+
+    $(previewId).innerHTML =
+      `<img src="${esc(url)}" alt="Background preview">`;
+  }
+
+  $("#purposeUrl").addEventListener("input", () => {
+    updatePreview("#purposeUrl", "#purposePreview");
+  });
+
+  $("#supportUrl").addEventListener("input", () => {
+    updatePreview("#supportUrl", "#supportPreview");
+  });
+
+  $("#uploadPurpose").onclick = async () => {
+    try {
+      const file = $("#purposeFile").files[0];
+      const url = await uploadImage(file);
+
+      $("#purposeUrl").value = url;
+      updatePreview("#purposeUrl", "#purposePreview");
+
+      notice("Earth image uploaded. Now save the background images.");
+
+    } catch (error) {
+      notice(error.message, true);
+    }
+  };
+
+  $("#uploadSupport").onclick = async () => {
+    try {
+      const file = $("#supportFile").files[0];
+      const url = await uploadImage(file);
+
+      $("#supportUrl").value = url;
+      updatePreview("#supportUrl", "#supportPreview");
+
+      notice("Ocean image uploaded. Now save the background images.");
+
+    } catch (error) {
+      notice(error.message, true);
+    }
+  };
+
+  $("#saveImages").onclick = async () => {
+    try {
+      const purpose = $("#purposeUrl").value.trim();
+      const support = $("#supportUrl").value.trim();
+
+      await api("/content", {
+        method: "PUT",
+        body: JSON.stringify({
+          purpose_image: purpose,
+          support_image: support
+        })
+      });
+
+      notice("Background image settings saved.");
+
+    } catch (error) {
+      notice(error.message, true);
+    }
+  };
+}
+
+/* PRODUCTS AND SERVICES */
+
+async function items(panel) {
+  const data = await api("/items");
+
+  panel.innerHTML = `
+    <div class="card">
+      <h2>${editingItem ? "Edit" : "Add"} Product or Service</h2>
+
+      <form id="itemForm" class="grid">
+
+        ${field("Content type", "type", editingItem?.type || "product")}
+
+        <div class="field">
+          <label>Status</label>
+          <select name="status">
+            <option value="draft">Draft (hidden)</option>
+            <option value="published" ${editingItem?.status === "published" ? "selected" : ""}>Published</option>
+            <option value="coming_soon" ${editingItem?.status === "coming_soon" ? "selected" : ""}>Coming soon</option>
+          </select>
+        </div>
+
+        ${field("Name", "name", editingItem?.name || "")}
+        ${field("Short perception", "short_perception", editingItem?.short_perception || "")}
+        ${field("Featured image URL", "image", editingItem?.image || "")}
+        ${field("Button text", "button_text", editingItem?.button_text || "Explore")}
+        ${field("Button URL", "button_url", editingItem?.button_url || "", "url")}
+        ${field("Publish date", "publish_at", editingItem?.publish_at || "", "date")}
+
+        ${field(
+          "Description",
+          "description",
+          editingItem?.description || "",
+          "textarea",
+          true
+        )}
+
+        <div class="field full">
+          <label>Upload product image</label>
+          <input type="file" id="itemUpload" accept="image/*">
+        </div>
+
+        <div class="actions field full">
+          <button type="button" class="secondary" id="uploadItem">
+            Upload image
+          </button>
+
+          <button class="primary">Save item</button>
+
+          <button type="button" class="secondary" id="cancelEdit">
+            Clear
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Existing Products & Services</h2>
+
+      ${
+        data.map(item => `
+          <div class="rowitem">
+            <div>
+              <b>${esc(item.name)}</b>
+              <div class="muted">
+                ${esc(item.type)} · ${esc(item.status)} ·
+                ${esc(item.short_perception)}
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="secondary" data-edit="${item.id}">Edit</button>
+              <button class="danger" data-delete="${item.id}">Delete</button>
+            </div>
+          </div>
+        `).join("") || '<p class="muted">No items yet.</p>'
+      }
+    </div>
+  `;
+
+  $("#cancelEdit").onclick = () => {
+    editingItem = null;
+    render();
+  };
+
+  $("#uploadItem").onclick = async () => {
+    try {
+      const url = await uploadImage($("#itemUpload").files[0]);
+      $('#itemForm [name="image"]').value = url;
+      notice("Product image uploaded.");
+
+    } catch (error) {
+      notice(error.message, true);
+    }
+  };
+
+  $("#itemForm").onsubmit = async event => {
+    event.preventDefault();
+
+    try {
+      const body = Object.fromEntries(new FormData(event.target));
+
+      if (!body.name) {
+        return notice("Enter a product or service name.", true);
+      }
+
+      await api(
+        editingItem ? "/items/" + editingItem.id : "/items",
+        {
+          method: editingItem ? "PUT" : "POST",
+          body: JSON.stringify(body)
+        }
+      );
+
+      editingItem = null;
+      notice("Product or service saved.");
+      await render();
+
+    } catch (error) {
+      notice(error.message, true);
+    }
+  };
+
+  panel.querySelectorAll("[data-edit]").forEach(button => {
+    button.onclick = () => {
+      editingItem = data.find(
+        item => item.id == button.dataset.edit
+      );
+      render();
+    };
+  });
+
+  panel.querySelectorAll("[data-delete]").forEach(button => {
+    button.onclick = async () => {
+      if (!confirm("Delete this item?")) return;
+
+      try {
+        await api("/items/" + button.dataset.delete, {
+          method: "DELETE"
+        });
+
+        notice("Item deleted.");
+        await render();
+
+      } catch (error) {
+        notice(error.message, true);
+      }
+    };
+  });
+}
+
+/* FAQ MANAGER */
+
+async function faqs(panel) {
+  const data = await api("/faqs");
+
+  panel.innerHTML = `
+    <div class="card">
+      <h2>${editingFaq ? "Edit" : "Add"} Question & Answer</h2>
+
+      <form id="faqForm" class="grid">
+
+        ${field("Product/service name", "item_name", editingFaq?.item_name || "")}
+        ${field("Question (English)", "question_en", editingFaq?.question_en || "")}
+        ${field("Question (বাংলা)", "question_bn", editingFaq?.question_bn || "")}
+
+        ${field(
+          "Answer",
+          "answer",
+          editingFaq?.answer || "",
+          "textarea",
+          true
+        )}
+
+        <div class="actions field full">
+          <button class="primary">Save Q&A</button>
+          <button type="button" class="secondary" id="faqClear">Clear</button>
+        </div>
+
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>Questions and Answers</h2>
+
+      ${
+        data.map(item => `
+          <div class="rowitem">
+            <div>
+              <b>${esc(item.item_name)} — ${esc(item.question_en)}</b>
+              <div class="muted">
+                ${esc(item.question_bn)}<br>
+                ${esc(item.answer)}
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="secondary" data-edit="${item.id}">Edit</button>
+              <button class="danger" data-del="${item.id}">Delete</button>
+            </div>
+          </div>
+        `).join("") || '<p class="muted">No questions yet.</p>'
+      }
+    </div>
+  `;
+
+  $("#faqClear").onclick = () => {
+    editingFaq = null;
+    render();
+  };
+
+  $("#faqForm").onsubmit = async event => {
+    event.preventDefault();
+
+    try {
+      await api(
+        editingFaq ? "/faqs/" + editingFaq.id : "/faqs",
+        {
+          method: editingFaq ? "PUT" : "POST",
+          body: JSON.stringify(
+            Object.fromEntries(new FormData(event.target))
+          )
+        }
+      );
+
+      editingFaq = null;
+      notice("Question saved.");
+      await render();
+
+    } catch (error) {
+      notice(error.message, true);
+    }
+  };
+
+  panel.querySelectorAll("[data-edit]").forEach(button => {
+    button.onclick = () => {
+      editingFaq = data.find(
+        item => item.id == button.dataset.edit
+      );
+      render();
+    };
+  });
+
+  panel.querySelectorAll("[data-del]").forEach(button => {
+    button.onclick = async () => {
+      if (!confirm("Delete question?")) return;
+
+      try {
+        await api("/faqs/" + button.dataset.del, {
+          method: "DELETE"
+        });
+
+        await render();
+
+      } catch (error) {
+        notice(error.message, true);
+      }
+    };
+  });
+}
+
+/* MESSAGE INBOX */
+
+async function messages(panel) {
+  const mode = window.msgMode || "all";
+  const data = await api("/messages?mode=" + mode);
+
+  panel.innerHTML = `
+    <div class="card">
+
+      <div class="actions">
+        <button class="secondary" data-mode="unread">Unread</button>
+        <button class="secondary" data-mode="read">Read</button>
+        <button class="secondary" data-mode="all">All</button>
+      </div>
+
+      ${
+        data.map(item => `
+          <div class="rowitem">
+            <div>
+              <b>${esc(item.email)}</b>
+              <div class="muted">
+                ${esc(item.created_at)} ·
+                ${item.is_read ? "Read" : "Unread"}
+              </div>
+              <p>${esc(item.message)}</p>
+            </div>
+
+            <button
+              class="secondary"
+              data-read="${item.id}"
+              data-value="${item.is_read ? 0 : 1}"
+            >
+              ${item.is_read ? "Mark unread" : "Mark read"}
+            </button>
+          </div>
+        `).join("") || '<p class="muted">No messages in this view.</p>'
+      }
+
+    </div>
+  `;
+
+  panel.querySelectorAll("[data-mode]").forEach(button => {
+    button.onclick = () => {
+      window.msgMode = button.dataset.mode;
+      render();
+    };
+  });
+
+  panel.querySelectorAll("[data-read]").forEach(button => {
+    button.onclick = async () => {
+      try {
+        await api("/messages/" + button.dataset.read, {
+          method: "PATCH",
+          body: JSON.stringify({
+            is_read: Number(button.dataset.value)
+          })
+        });
+
+        await render();
+
+      } catch (error) {
+        notice(error.message, true);
+      }
+    };
+  });
+}
+
+/* FEEDBACK MANAGER */
+
+async function feedback(panel) {
+  const data = await api("/feedback");
+
+  panel.innerHTML = `
+    <div class="card">
+      <h2>Received Feedback</h2>
+
+      ${
+        data.map(item => `
+          <div class="rowitem">
+            <div>
+              <b>${esc(item.email || "Anonymous")}</b>
+              <div class="muted">${esc(item.created_at)}</div>
+              <p>${esc(item.message)}</p>
+            </div>
+          </div>
+        `).join("") || '<p class="muted">No feedback yet.</p>'
+      }
+
+    </div>
+  `;
+}
+
+/* FOOTER MANAGER */
+
+async function footer(panel) {
+  const data = await api("/footer/manage");
+
+  panel.innerHTML = `
+    <div class="card">
+      <h2>Add New Footer Section</h2>
+
+      <form id="sectionForm" class="actions">
+        <input
+          name="title"
+          placeholder="Section title"
+          required
+        >
+        <button class="primary">Add section</button>
+      </form>
+    </div>
+
+    ${
+      data.sections.map(section => `
+        <div class="card">
+
+          <div class="rowitem">
+            <h2>${esc(section.title)}</h2>
+            <button
+              class="danger"
+              data-sec-del="${section.id}"
+            >
+              Delete section
+            </button>
+          </div>
+
+          <form
+            class="actions"
+            data-add-item="${section.id}"
+          >
+            <input name="name" placeholder="Item name" required>
+    
